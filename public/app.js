@@ -1,24 +1,7 @@
-/* eslint-env browser */
-/* global document, window, localStorage */
-
-/**
- * @typedef {Object} Task
- * @property {string} id
- * @property {string} topic
- * @property {string} priority
- * @property {string} status
- * @property {string} description
- * @property {boolean} completed
- * @property {number} createdAt
- * @property {number} updatedAt
- */
-
 'use strict';
 
 (function () {
-  // Storage key and helpers
   const STORAGE_KEY = 'todo_tasks_v1';
-  /** @returns {Array} */
   function loadTasks() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -40,56 +23,51 @@
     );
   }
 
-  // DOM refs
-  const form = /** @type {HTMLFormElement} */ (
-    document.getElementById('task-form')
-  );
-  const formTitle = /** @type {HTMLElement} */ (
-    document.getElementById('form-title')
-  );
-  const inputId = /** @type {HTMLInputElement} */ (
-    document.getElementById('task-id')
-  );
-  const inputTopic = /** @type {HTMLInputElement} */ (
-    document.getElementById('topic')
-  );
-  const inputPriority = /** @type {HTMLSelectElement} */ (
-    document.getElementById('priority')
-  );
-  const inputStatus = /** @type {HTMLSelectElement} */ (
-    document.getElementById('status')
-  );
-  const inputDescription = /** @type {HTMLTextAreaElement} */ (
-    document.getElementById('description')
-  );
-  const saveBtn = /** @type {HTMLButtonElement} */ (
-    document.getElementById('save-btn')
-  );
-  const resetBtn = /** @type {HTMLButtonElement} */ (
-    document.getElementById('reset-btn')
-  );
-  const list = /** @type {HTMLUListElement} */ (
-    document.getElementById('task-list')
-  );
-  const emptyState = /** @type {HTMLElement} */ (
-    document.getElementById('empty-state')
-  );
+  const form = document.getElementById('task-form');
+  const formTitle = document.getElementById('form-title');
+  const inputId = document.getElementById('task-id');
+  const inputTopic = document.getElementById('topic');
+  const inputPriority = document.getElementById('priority');
+  const inputStatus = document.getElementById('status');
+  const inputDescription = document.getElementById('description');
+  const saveBtn = document.getElementById('save-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const list = document.getElementById('task-list');
+  const emptyState = document.getElementById('empty-state');
 
-  // State
+  // 🔽 Prioriteettisuodatusnapit
+  const filterContainer = document.createElement('div');
+  filterContainer.id = 'filter-container';
+  ['all', 'high', 'medium', 'low'].forEach((prio) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.filter = prio;
+    btn.textContent =
+      prio === 'all'
+        ? 'Show All'
+        : prio.charAt(0).toUpperCase() + prio.slice(1);
+    filterContainer.appendChild(btn);
+  });
+  list.parentNode.insertBefore(filterContainer, list);
+
   let tasks = loadTasks();
+  let currentFilter = 'all'; // 🔹 aktiivinen suodatin
 
-  // Render
   function render() {
     list.innerHTML = '';
-    if (!tasks.length) {
+    const visibleTasks =
+      currentFilter === 'all'
+        ? tasks
+        : tasks.filter((t) => t.priority === currentFilter);
+
+    if (!visibleTasks.length) {
       emptyState.style.display = 'block';
       return;
     }
     emptyState.style.display = 'none';
 
-    tasks
+    visibleTasks
       .sort((a, b) => {
-        // Not-done first, then by priority (high->low), then newest first
         if (a.completed !== b.completed) return a.completed ? 1 : -1;
         const prioRank = { high: 0, medium: 1, low: 2 };
         if (prioRank[a.priority] !== prioRank[b.priority]) {
@@ -102,27 +80,27 @@
         li.className = 'task' + (t.completed ? ' done' : '');
         li.dataset.id = t.id;
         li.innerHTML = `
-					<div>
-						<div class="title">${escapeHtml(t.topic)}</div>
-						<div class="desc">${escapeHtml(t.description || '')}</div>
-					</div>
-					<div class="meta">
-						<span class="badge prio-${t.priority}">
-							<span class="dot"></span>
-							${t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
-						</span>
-					</div>
-					<div class="meta">
-						${badgeForStatus(t.status)}
-					</div>
-					<div class="controls">
-						<button data-action="edit" class="secondary">Edit</button>
-						<button data-action="complete" class="${t.completed ? 'secondary' : ''}">
-							${t.completed ? 'Undo' : 'Complete'}
-						</button>
-						<button data-action="delete" class="danger">Delete</button>
-					</div>
-				`;
+          <div>
+            <div class="title">${escapeHtml(t.topic)}</div>
+            <div class="desc">${escapeHtml(t.description || '')}</div>
+          </div>
+          <div class="meta">
+            <span class="badge prio-${t.priority}">
+              <span class="dot"></span>
+              ${t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
+            </span>
+          </div>
+          <div class="meta">
+            ${badgeForStatus(t.status)}
+          </div>
+          <div class="controls">
+            <button data-action="edit" class="secondary">Edit</button>
+            <button data-action="complete" class="${t.completed ? 'secondary' : ''}">
+              ${t.completed ? 'Undo' : 'Complete'}
+            </button>
+            <button data-action="delete" class="danger">Delete</button>
+          </div>
+        `;
         list.appendChild(li);
       });
   }
@@ -147,7 +125,6 @@
       .replaceAll("'", '&#039;');
   }
 
-  // Form handling
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const now = Date.now();
@@ -187,9 +164,7 @@
     render();
   });
 
-  resetBtn.addEventListener('click', () => {
-    resetForm();
-  });
+  resetBtn.addEventListener('click', resetForm);
 
   function resetForm() {
     formTitle.textContent = 'Create Task';
@@ -200,12 +175,10 @@
     saveBtn.textContent = 'Save Task';
   }
 
-  // List actions (event delegation)
   list.addEventListener('click', (e) => {
-    const target = /** @type {HTMLElement} */ (e.target);
+    const target = e.target;
     if (target.tagName !== 'BUTTON') return;
     const action = target.dataset.action;
-    /** @type {HTMLElement | null} */
     const li = target.closest('.task');
     if (!li) return;
     const id = li.dataset.id;
@@ -232,8 +205,8 @@
         status: nextCompleted
           ? 'done'
           : t.status === 'done'
-          ? 'todo'
-          : t.status,
+            ? 'todo'
+            : t.status,
         updatedAt: Date.now(),
       };
       saveTasks(tasks);
@@ -248,6 +221,13 @@
     }
   });
 
-  // Initial paint
+  // 🔹 Prioriteettisuodatuksen logiikka
+  filterContainer.addEventListener('click', (e) => {
+    const btn = e.target;
+    if (!btn.dataset.filter) return;
+    currentFilter = btn.dataset.filter;
+    render();
+  });
+
   render();
 })();

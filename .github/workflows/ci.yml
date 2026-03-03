@@ -2,29 +2,34 @@ name: CI
 
 on:
   push:
-    branches: [testing]
+    branches: [lopputyo]
   pull_request:
-    branches: [testing]
+    branches: [lopputyo]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm ci
 
+      # 4️⃣ Run Vitest unit tests
       - name: Run Vitest unit tests
-        run: npm run test
+        run: npx vitest run
 
+      # 5️⃣ Run Cypress E2E tests
       - name: Run Cypress E2E tests
         uses: cypress-io/github-action@v6
         with:
