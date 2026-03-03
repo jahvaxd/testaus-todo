@@ -52,7 +52,7 @@ describe('Todo app', () => {
     cy.get('#task-list .task').should('have.length', 1);
     cy.get('#task-list .task .title').should('contain', 'Poistettava taski');
 
-    // Delete the task
+    // poista taski
     cy.get('#task-list .task')
       .first()
       .within(() => {
